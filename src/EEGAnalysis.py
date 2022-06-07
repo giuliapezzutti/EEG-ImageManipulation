@@ -13,7 +13,12 @@ class EEGAnalysis:
     """
     Class implemented for the EEG preprocessing and visualization from the reading of .xdf files
 
-    Giulia Pezzutti - Institute for Neural Engineering, @ TUGraz
+    Giulia Pezzutti
+
+    Assoc.Prof. Dr. Selina Christin Wriessnegger
+    M.Sc. Luis Alberto Barradas Chacon
+
+    Institute for Neural Engineering, @ TUGraz
     """
 
     def __init__(self, path, dict_info):
