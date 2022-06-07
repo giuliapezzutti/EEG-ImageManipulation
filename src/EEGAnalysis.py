@@ -11,7 +11,8 @@ from ERDS import compute_erds
 
 class EEGAnalysis:
     """
-    Class implemented for the EEG preprocessing and visualization from the reading of .xdf files
+    Class implemented for the EEG preprocessing and visualization from the reading of .xdf files. This class is
+    intended with the use of BrainVision products, LSL and Psychopy.
 
     Giulia Pezzutti
 
