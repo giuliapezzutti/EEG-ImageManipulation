@@ -130,7 +130,7 @@ if __name__ == '__main__':
         g = participant_data.loc[participant_data['code'] == code]['gender'].values[0][0]
 
         eeg = EEGAnalysis(file_path, dict_info=dict_info)
-        eeg.run_raw(filtering=True)
+        eeg.run_raw()
         eeg.create_epochs()
 
         n200_peaks, n200_annotations = eeg.get_peak(mean=False, channels=['FT9', 'Fc5', 'T7', 'TP9', 'CP5'],
