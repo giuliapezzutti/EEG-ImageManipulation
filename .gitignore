@@ -132,3 +132,4 @@ dmypy.json
 .idea/
 data/eeg/
 data/pickle/
+data/final-dataset/
