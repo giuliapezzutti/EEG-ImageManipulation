@@ -1,1 +1,3 @@
 # eeg-preprocessing
+
+Private repository
