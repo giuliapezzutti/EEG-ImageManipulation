@@ -626,6 +626,8 @@ class EEGAnalysis:
         labels = [annotation[0][2] for annotation in self.epochs.get_annotations_per_epoch()]
         info = {'fs': self.eeg_fs, 'channels': self.epochs.ch_names, 'tmin': self.t_min, 'tmax': self.t_max}
 
+        Path('data/pickle/').mkdir(parents=True, exist_ok=True)
+
         with open('../data/pickle/' + self.file_info['subject'] + '_data.pkl', 'wb') as f:
             pickle.dump(epochs, f)
         with open('../data/pickle/' + self.file_info['subject'] + '_labels.pkl', 'wb') as f:

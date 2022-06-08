@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
         epochs = data.reshape(data.shape[0], -1)
         gender = np.expand_dims(np.array([g]*(epochs.shape[0])), axis=-1)
-        pd_data = np.concatenate([gender, epochs], axis=1)
+        pd_signal = np.concatenate([gender, epochs], axis=1)
 
         # calculate mean frontal amplitude in 300-600ms
 
@@ -65,7 +65,5 @@ if __name__ == '__main__':
 
         pd_data = np.vstack((np.array(labels), frontal_amplitude, np.array(peaks))).T
 
-        pd = pd.DataFrame(data=pd_data, columns=['manipulation', 'f-amp', 'tl-peak'])
-        print(pd)
-
-        exit(1)
+    pd = pd.DataFrame(data=pd_data, columns=['manipulation', 'f-amp', 'tl-peak'])
+    print(pd)

@@ -17,7 +17,7 @@ def compute_erds(epochs, rois, fs, t_min, f_max=50, path=None):
     """
 
     # get EEG data
-    signals = epochs.get_data(picks='eeg')  # epochs x channels x instants
+    signals = epochs.get_data()  # epochs x channels x instants
 
     # get the list of unique annotations from the data
     annotations = [annotation[0][2] for annotation in epochs.get_annotations_per_epoch()]
