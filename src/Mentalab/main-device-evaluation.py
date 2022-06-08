@@ -4,7 +4,7 @@ import tkinter
 
 from matplotlib import pyplot as plt
 
-from EEGAnalysis import *
+from ..EEGAnalysis import *
 
 
 def get_path():
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     path = get_path()
     # path = '../data/sub-test_without_gel/ses-S001/eeg/sub-test_without_gel_ses-S001_task-Default_run-001_eeg.xdf'
     filename = get_subject_name(path)
-    eeg = EEGAnalysis(path, removed_samples=0)
+    eeg = EEGAnalysis(path, dict_info=None)  # to be fixed if it must be executed
     eeg.create_raw()
     eeg.raw_time_filtering()
     eeg.visualize_raw(psd_topo=False)
