@@ -19,7 +19,7 @@ if __name__ == '__main__':
         print('\n\nAnalyzing file', path)
 
         eeg = EEGAnalysis(path, dict_info)
-        eeg.run_raw(visualize_raw=False, filtering=True)
+        eeg.run_raw(visualize_raw=False)
 
         raw = eeg.raw
         raws.append(raw)
