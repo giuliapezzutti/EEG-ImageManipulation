@@ -6,6 +6,11 @@ import re
 import mne
 import numpy as np
 import pandas as pd
+import seaborn
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
 if __name__ == '__main__':
 
@@ -20,7 +25,12 @@ if __name__ == '__main__':
     participant_data = pd.read_csv('../data/form-results/form-results.csv')
     participant_data = participant_data[['code', 'gender']]
 
+    pd_signal = None
+    pd_gender = []
+
     for idx, code in enumerate(codes):
+
+        print(code)
 
         with open(paths[idx], 'rb') as f:
             data = pickle.load(f)
@@ -30,11 +40,22 @@ if __name__ == '__main__':
             labels = pickle.load(f)
             conditions = list(set(labels))
 
+        data = data[:, [index for index in range(len(info['channels'])) if 'EOG' not in info['channels'][index]]]
+
         g = participant_data.loc[participant_data['code'] == code]['gender'].values[0]
 
         epochs = data.reshape(data.shape[0], -1)
         gender = np.expand_dims(np.array([g]*(epochs.shape[0])), axis=-1)
-        pd_signal = np.concatenate([gender, epochs], axis=1)
+        # pd_subject_signal = np.concatenate([gender, epochs], axis=1)
+
+        if pd_signal is None:
+            pd_signal = epochs
+            pd_gender = gender
+        else:
+            pd_signal = np.concatenate((pd_signal, epochs), axis=0)
+            pd_gender = np.concatenate((pd_gender, gender), axis=0)
+
+        continue
 
         # calculate mean frontal amplitude in 300-600ms
 
@@ -65,5 +86,30 @@ if __name__ == '__main__':
 
         pd_data = np.vstack((np.array(labels), frontal_amplitude, np.array(peaks))).T
 
-    pd = pd.DataFrame(data=pd_data, columns=['manipulation', 'f-amp', 'tl-peak'])
-    print(pd)
+    # pd = pd.DataFrame(data=pd_data, columns=['manipulation', 'f-amp', 'tl-peak'])
+    # print(pd)
+
+    print('\n\nGender prediction from whole signals')
+    pd_signal = np.array(pd_signal)
+
+    X = pd.DataFrame(pd_signal)
+    Y = pd.DataFrame(data=pd_gender, columns=['gender'])
+
+    df = pd.concat([X, Y], axis=1)
+
+    Y = Y[['gender']] == 'female'
+    Y = np.ravel(Y)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30, random_state=42)
+
+    model = LDA()
+    model.fit(X_train, y_train)
+
+    print('Train score: ', model.score(X_train, y_train))
+    print('Test score: ', model.score(X_test, y_test))
+
+    coefs = np.array(model.coef_)
+    coefs = coefs.reshape(-1, data.shape[-1])
+
+    seaborn.heatmap(coefs)
+    plt.show()
