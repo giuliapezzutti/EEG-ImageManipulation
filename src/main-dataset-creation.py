@@ -1,3 +1,4 @@
+import json
 from os.path import exists
 
 import pandas as pd
@@ -20,6 +21,7 @@ if __name__ == '__main__':
     codes_ratings = list(set(codes_ratings))
 
     path_eeg = '../data/eeg/'
+    dict_info = json.load(open('../data/eeg/info_full.json'))
 
     info_dataset, signal_dataset, label_dataset = [], [], []
 

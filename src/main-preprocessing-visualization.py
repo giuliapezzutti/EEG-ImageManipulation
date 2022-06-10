@@ -19,6 +19,7 @@ if __name__ == '__main__':
     # '../data/eeg/subj_jomo20_block1.xdf', '../data/eeg/subj_vasa28_block1.xdf']
 
     dict_info = json.load(open('../data/eeg/info.json'))
+    dict_info_full = json.load(open('../data/eeg/info_full.json'))
 
     signals_means = {}
 
@@ -28,7 +29,7 @@ if __name__ == '__main__':
         print('\n\nAnalyzing file', path)
 
         eeg = EEGAnalysis(path, dict_info)
-        eeg.run_raw_epochs(visualize_raw=False, save_images=True)
+        eeg.run_raw_epochs(visualize_raw=False, save_images=True, create_evoked=True, save_pickle=False)
 
         if len(paths) > 1:
             evoked = eeg.evoked
@@ -37,6 +38,9 @@ if __name__ == '__main__':
                     signals_means[key] = mne.combine_evoked([signals_means[key], evoked[key]], weights='equal')
                 else:
                     signals_means[key] = evoked[key]
+
+        eeg = EEGAnalysis(path, dict_info_full)
+        eeg.run_raw_epochs(visualize_raw=False, save_images=False, create_evoked=False, save_pickle=True)
 
     conditions, rois = derive_conditions_rois(labels=signals_means.keys())
     plot_mean_epochs(signals_means, conditions, rois, dict_info['erp'])

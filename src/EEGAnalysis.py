@@ -635,11 +635,13 @@ class EEGAnalysis:
         with open('../data/pickle/' + self.file_info['subject'] + '_info.pkl', 'wb') as f:
             pickle.dump(info, f)
 
-    def run_raw_epochs(self, visualize_raw=False, save_images=True):
+    def run_raw_epochs(self, visualize_raw=False, save_images=True, create_evoked=True, save_pickle=True):
         """
         Function to run all the methods previously reported. Attention: ICA is for now not used.
         :param visualize_raw: boolean, if raw signals should be visualized or not
         :param save_images: boolean, if epoch plots should be saved or not (note: they are never visualized)
+        :param create_evoked: boolean, if Evoked computation is necessary
+        :param save_pickle: boolean, if the pickles with data, label and info should be saved
         """
 
         self.create_raw()
@@ -663,10 +665,12 @@ class EEGAnalysis:
         if save_images:
             compute_erds(epochs=self.epochs, rois=self.input_info['rois'], fs=self.eeg_fs, t_min=self.t_min,
                          path=self.file_info['output_folder'])
-        self.create_evoked()
-        if save_images:
-            self.visualize_evoked()
-        self.save_pickle()
+        if create_evoked:
+            self.create_evoked()
+            if save_images:
+                self.visualize_evoked()
+        if save_pickle:
+            self.save_pickle()
 
     def run_raw(self, visualize_raw=False):
         """
@@ -694,12 +698,14 @@ class EEGAnalysis:
         self.create_annotations(full=self.input_info['full_annotation'])
         self.raw.set_annotations(self.annotations)
 
-    def run_combine_raw_epochs(self, visualize_raw=False, save_images=True, new_raws=None):
+    def run_combine_raw_epochs(self, visualize_raw=False, save_images=True, create_evoked=True, save_pickle=True, new_raws=None):
         """
         Function to combine different raw data and to create the correspondent new epochs (it can be useful when the
         acquisition is in more files)
         :param visualize_raw: boolean, if raw signals should be visualized or not
         :param save_images: boolean, if epoch plots should be saved or not (note: they are never visualized)
+        :param create_evoked: boolean, if Evoked computation is necessary
+        :param save_pickle: boolean, if the pickles with data, label and info should be saved
         :param new_raws: list of raws files to be concatenated after the current raw variable
         :return:
         """
@@ -733,10 +739,12 @@ class EEGAnalysis:
         if save_images:
             compute_erds(epochs=self.epochs, rois=self.input_info['rois'], fs=self.eeg_fs, t_min=self.t_min,
                          path=self.file_info['output_folder'])
-        self.create_evoked()
-        if save_images:
-            self.visualize_evoked()
-        self.save_pickle()
+        if create_evoked:
+            self.create_evoked()
+            if save_images:
+                self.visualize_evoked()
+        if save_pickle:
+            self.save_pickle()
 
     def __getattr__(self, name):
         return 'EEGAnalysis does not have `{}` attribute.'.format(str(name))

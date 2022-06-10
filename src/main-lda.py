@@ -25,6 +25,9 @@ if __name__ == '__main__':
     participant_data = pd.read_csv('../data/form-results/form-results.csv')
     participant_data = participant_data[['code', 'gender']]
 
+    ratings_data = pd.read_csv('../data/ratings-results/ratings-results.csv')
+    ratings_data = ratings_data[['code', 'image_name', 'valence', 'arousal']]
+
     pd_signal = None
     pd_gender = []
 
@@ -38,7 +41,8 @@ if __name__ == '__main__':
             info = pickle.load(f)
         with open(paths[idx].replace('_data', '_labels'), 'rb') as f:
             labels = pickle.load(f)
-            conditions = list(set(labels))
+            conditions = [label.split('/')[1] for label in labels]
+            unique_conditions = list(set(conditions))
 
         data = data[:, [index for index in range(len(info['channels'])) if 'EOG' not in info['channels'][index]]]
 
@@ -46,7 +50,6 @@ if __name__ == '__main__':
 
         epochs = data.reshape(data.shape[0], -1)
         gender = np.expand_dims(np.array([g]*(epochs.shape[0])), axis=-1)
-        # pd_subject_signal = np.concatenate([gender, epochs], axis=1)
 
         if pd_signal is None:
             pd_signal = epochs
@@ -54,8 +57,6 @@ if __name__ == '__main__':
         else:
             pd_signal = np.concatenate((pd_signal, epochs), axis=0)
             pd_gender = np.concatenate((pd_gender, gender), axis=0)
-
-        continue
 
         # calculate mean frontal amplitude in 300-600ms
 
