@@ -6,7 +6,8 @@ from functions import *
 
 if __name__ == '__main__':
 
-    paths = ['../data/eeg/subj_jemc16 _block1.xdf',
+    paths = ['../data/eeg/subj_riri06_block1.xdf',
+             '../data/eeg/subj_brfr09_block1.xdf', '../data/eeg/subj_jemc16_block1.xdf',
              '../data/eeg/subj_viwi30_block1.xdf', '../data/eeg/subj_ervi22_block1.xdf',
              '../data/eeg/subj_vamo24_block1.xdf', '../data/eeg/subj_mama13_block1.xdf',
              '../data/eeg/subj_moob25_block1.xdf', '../data/eeg/subj_mile27_block1.xdf',
@@ -14,7 +15,7 @@ if __name__ == '__main__':
 
     # ['../data/eeg/subj_maba09_block1.xdf', '../data/eeg/subj_soze31_block1.xdf',
     # '../data/eeg/subj_nipe10_block1.xdf', '../data/eeg/subj_dino02_block1.xdf']
-    # ['../data/eeg/subj_jemc16 _block1.xdf',
+    # ['../data/eeg/subj_jemc16_block1.xdf',
     # '../data/eeg/subj_viwi30_block1.xdf', '../data/eeg/subj_ervi22_block1.xdf',
     # '../data/eeg/subj_vamo24_block1.xdf', '../data/eeg/subj_mama13_block1.xdf',
     # '../data/eeg/subj_moob25_block1.xdf', '../data/eeg/subj_mile27_block1.xdf',
@@ -31,7 +32,7 @@ if __name__ == '__main__':
         print('\n\nAnalyzing file', path)
 
         eeg = EEGAnalysis(path, dict_info)
-        eeg.run_raw_epochs(visualize_raw=False, save_images=True, create_evoked=True, save_pickle=False)
+        eeg.run_raw_epochs(visualize_raw=False, save_images=True, ica_analysis=False, create_evoked=True, save_pickle=False)
 
         if len(paths) > 1:
             evoked = eeg.evoked

@@ -39,7 +39,7 @@ class EEGAnalysis:
         self.eeg_signal, self.eeg_instants, self.eeg_fs, self.length = None, None, None, None
         self.marker_ids, self.marker_instants = None, None
         self.channels_names, self.channels_types, self.evoked_rois = {}, {}, {}
-        self.info, self.raw = None, None
+        self.info, self.raw, self.bad_channels = None, None, None
         self.events, self.event_mapping, self.epochs, self.annotations = None, None, None, None
         self.evoked = {}
         self.rois_numbers = {}
@@ -168,6 +168,11 @@ class EEGAnalysis:
             # get channel type
             self.channels_types[idx] = 'eog' if info['label'][0].find('EOG') != -1 else 'eeg'
 
+        if self.file_info['subject'] in self.input_info['bad_channels'].keys():
+            self.bad_channels = self.input_info['bad_channels'][self.file_info['subject']]
+        else:
+            self.bad_channels = []
+
     def fix_lost_samples(self, orn_signal, orn_instants, effective_sample_frequency):
 
         print('BrainVision RDA Markers: ', orn_signal)
@@ -219,6 +224,9 @@ class EEGAnalysis:
         # set montage setting according to the input
         standard_montage = mne.channels.make_standard_montage(self.input_info['montage'])
         self.raw.set_montage(standard_montage)
+
+        self.raw.info['bads'] = self.bad_channels
+        self.raw.interpolate_bads(reset_bads=True)
 
         rois = self.input_info['rois']
 
@@ -635,11 +643,12 @@ class EEGAnalysis:
         with open('../data/pickle/' + self.file_info['subject'] + '_info.pkl', 'wb') as f:
             pickle.dump(info, f)
 
-    def run_raw_epochs(self, visualize_raw=False, save_images=True, create_evoked=True, save_pickle=True):
+    def run_raw_epochs(self, visualize_raw=False, save_images=True, ica_analysis=False, create_evoked=True, save_pickle=True):
         """
         Function to run all the methods previously reported. Attention: ICA is for now not used.
         :param visualize_raw: boolean, if raw signals should be visualized or not
         :param save_images: boolean, if epoch plots should be saved or not (note: they are never visualized)
+        :param ica_analysis: boolean, if ICA analysis should be performed
         :param create_evoked: boolean, if Evoked computation is necessary
         :param save_pickle: boolean, if the pickles with data, label and info should be saved
         """
@@ -658,7 +667,8 @@ class EEGAnalysis:
         if visualize_raw:
             self.visualize_raw()
 
-        # self.ica_remove_eog()
+        if ica_analysis:
+            self.raw_ica_remove_eog()
 
         self.create_annotations(full=self.input_info['full_annotation'])
         self.create_epochs(visualize_epochs=save_images)
@@ -672,11 +682,12 @@ class EEGAnalysis:
         if save_pickle:
             self.save_pickle()
 
-    def run_raw(self, visualize_raw=False):
+    def run_raw(self, visualize_raw=False, ica_analysis=False):
         """
         Function to run the analysis part regarding the RAW generation, filtering and annotation (it can be useful to
         generate new raw files concatenating multiple raw, e.g. when the acquisition is in more files)
         :param visualize_raw: boolean, if raw signals should be visualized or not
+        :param ica_analysis: boolean, if ICA analysis should be performed
         """
 
         self.create_raw()
@@ -693,17 +704,20 @@ class EEGAnalysis:
         if visualize_raw:
             self.visualize_raw()
 
-        # self.ica_remove_eog()
+        if ica_analysis:
+            self.raw_ica_remove_eog()
 
         self.create_annotations(full=self.input_info['full_annotation'])
         self.raw.set_annotations(self.annotations)
 
-    def run_combine_raw_epochs(self, visualize_raw=False, save_images=True, create_evoked=True, save_pickle=True, new_raws=None):
+    def run_combine_raw_epochs(self, visualize_raw=False, save_images=True, ica_analysis=False,
+                               create_evoked=True, save_pickle=True, new_raws=None):
         """
         Function to combine different raw data and to create the correspondent new epochs (it can be useful when the
         acquisition is in more files)
         :param visualize_raw: boolean, if raw signals should be visualized or not
         :param save_images: boolean, if epoch plots should be saved or not (note: they are never visualized)
+        :param ica_analysis: boolean, if ICA analysis should be performed
         :param create_evoked: boolean, if Evoked computation is necessary
         :param save_pickle: boolean, if the pickles with data, label and info should be saved
         :param new_raws: list of raws files to be concatenated after the current raw variable
@@ -733,7 +747,8 @@ class EEGAnalysis:
         if visualize_raw:
             self.visualize_raw()
 
-        # self.ica_remove_eog()
+        if ica_analysis:
+            self.raw_ica_remove_eog()
 
         self.create_epochs(visualize_epochs=save_images, set_annotations=False)
         if save_images:
