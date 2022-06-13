@@ -26,7 +26,7 @@ if __name__ == '__main__':
     participant_data = participant_data[['code', 'gender']]
 
     ratings_data = pd.read_csv('../data/ratings-results/ratings-results.csv')
-    ratings_data = ratings_data[['code', 'image_name', 'valence', 'arousal']]
+    ratings_data = ratings_data[['code', 'img_name', 'valence', 'arousal']]
 
     pd_signal = None
     pd_gender = []
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         g = participant_data.loc[participant_data['code'] == code]['gender'].values[0]
 
         epochs = data.reshape(data.shape[0], -1)
-        gender = np.expand_dims(np.array([g]*(epochs.shape[0])), axis=-1)
+        gender = np.expand_dims(np.array([g] * (epochs.shape[0])), axis=-1)
 
         if pd_signal is None:
             pd_signal = epochs
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
         frontal_data = data[:, frontal_indexes, start:end]
         frontal_amplitude = np.mean(frontal_data, axis=-1)
-        frontal_amplitude = np.mean(frontal_amplitude, axis=-1)*1e6
+        frontal_amplitude = np.mean(frontal_amplitude, axis=-1) * 1e6
 
         # calculate temporal left N200
 
@@ -83,7 +83,12 @@ if __name__ == '__main__':
         for epoch in temporal_data:
             peak_loc, peak_mag = mne.preprocessing.peak_finder(epoch, thresh=(max(epoch) - min(epoch)) / 50,
                                                                extrema=-1, verbose=False)
-            peaks.append(np.min(peak_mag)*1e6)
+            peaks.append(np.min(peak_mag) * 1e6)
+
+        for label in labels:
+            img_name = label.split('/')[0]
+            valence, arousal = ratings_data.loc[ratings_data['code'] == code].loc[ratings_data['img_name'] == img_name][['valence', 'arousal']].values[0]
+            # TODO: finish
 
         pd_data = np.vstack((np.array(labels), frontal_amplitude, np.array(peaks))).T
 
