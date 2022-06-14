@@ -12,6 +12,7 @@ if __name__ == '__main__':
     dict_info_full = json.load(open('../data/eeg/info_full.json'))
 
     for paths in subjects_paths:
+
         raws = []
 
         for path in paths[1:]:
@@ -25,8 +26,16 @@ if __name__ == '__main__':
             raws.append(raw)
 
         eeg = EEGAnalysis(paths[0], dict_info)
-        eeg.run_combine_raw_epochs(visualize_raw=True, save_images=True, create_evoked=True, save_pickle=False,
+        eeg.run_combine_raw_epochs(visualize_raw=False, save_images=True, create_evoked=True, save_pickle=False,
                                    new_raws=raws)
+
+        raws = []
+
+        for path in paths[1:]:
+
+            eeg = EEGAnalysis(path, dict_info_full)
+            eeg.run_raw(visualize_raw=False)
+            raws.append(eeg.raw)
 
         eeg = EEGAnalysis(paths[0], dict_info_full)
         eeg.run_combine_raw_epochs(visualize_raw=False, save_images=False, create_evoked=False, save_pickle=True,

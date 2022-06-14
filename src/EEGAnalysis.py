@@ -225,8 +225,9 @@ class EEGAnalysis:
         standard_montage = mne.channels.make_standard_montage(self.input_info['montage'])
         self.raw.set_montage(standard_montage)
 
-        self.raw.info['bads'] = self.bad_channels
-        self.raw.interpolate_bads(reset_bads=True)
+        if len(self.bad_channels) > 0:
+            self.raw.info['bads'] = self.bad_channels
+            self.raw.interpolate_bads(reset_bads=True)
 
         rois = self.input_info['rois']
 
@@ -643,6 +644,8 @@ class EEGAnalysis:
         with open('../data/pickle/' + self.file_info['subject'] + '_info.pkl', 'wb') as f:
             pickle.dump(info, f)
 
+        print('Pickle files correctly saved')
+
     def run_raw_epochs(self, visualize_raw=False, save_images=True, ica_analysis=False, create_evoked=True, save_pickle=True):
         """
         Function to run all the methods previously reported. Attention: ICA is for now not used.
@@ -738,7 +741,7 @@ class EEGAnalysis:
         if self.input_info['filtering'] is not None:
             self.raw_time_filtering()
 
-        self.create_annotations()
+        self.create_annotations(full=self.input_info['full_annotation'])
         self.raw.set_annotations(self.annotations)
 
         new_raws.insert(0, self.raw)

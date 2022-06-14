@@ -143,3 +143,14 @@ def plot_distribution(array_data, path):
     plt.savefig(path)
     plt.close()
 
+
+def get_label(valence, arousal, threshold=0.1 * 4):
+
+    if valence > 0 and arousal > 0:
+        return 'HVHA'
+    elif valence > 0 and arousal <= 0:
+        return 'HVLA'
+    elif valence <= 0 and arousal > 0:
+        return 'LVHA'
+    elif valence <= 0 and arousal <= 0:
+        return 'LVLA'

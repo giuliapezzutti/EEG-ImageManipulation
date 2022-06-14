@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
+from src.functions import get_label
+
 if __name__ == '__main__':
 
     paths = glob.glob('../data/pickle/*.pkl')
@@ -32,6 +34,10 @@ if __name__ == '__main__':
     pd_gender = []
 
     for idx, code in enumerate(codes):
+
+        # TODO: remove vasa28 and viwi30 when data available
+        if code == 'krki20' or code == 'nipe10' or code == 'vasa28' or code == 'viwi30':
+            continue
 
         print(code)
 
@@ -85,12 +91,49 @@ if __name__ == '__main__':
                                                                extrema=-1, verbose=False)
             peaks.append(np.min(peak_mag) * 1e6)
 
+        # calculate correspondent label
+
+        responses = []
         for label in labels:
             img_name = label.split('/')[0]
             valence, arousal = ratings_data.loc[ratings_data['code'] == code].loc[ratings_data['img_name'] == img_name][['valence', 'arousal']].values[0]
-            # TODO: finish
+            responses.append(get_label(valence, arousal))
 
-        pd_data = np.vstack((np.array(labels), frontal_amplitude, np.array(peaks))).T
+        valence = [response[0] for response in responses]
+        arousal = [response[2] for response in responses]
+
+        pd_data_valence = np.vstack((np.array(valence), frontal_amplitude, np.array(peaks))).T
+        pd_data_valence = pd.DataFrame(data=pd_data_valence, columns=['valence', 'f-amp', 'tl-peak'])
+
+        X = pd_data_valence[['f-amp', 'tl-peak']]
+        Y = pd_data_valence[['valence']] == 'H'
+
+        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30, random_state=42)
+        print(y_train)
+        model = LDA()
+        model.fit(X_train, y_train)
+
+        print('Valence')
+        print('Train score:', model.score(X_train, y_train))
+        print('Test score:', model.score(X_test, y_test))
+        print(model.coef_)
+
+        pd_data_arousal = np.vstack((np.array(arousal), frontal_amplitude, np.array(peaks))).T
+        pd_data_arousal = pd.DataFrame(data=pd_data_arousal, columns=['arousal', 'f-amp', 'tl-peak'])
+
+        X = pd_data_arousal[['f-amp', 'tl-peak']]
+        Y = pd_data_arousal[['arousal']] == 'H'
+
+        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30, random_state=42)
+        model = LDA()
+        model.fit(X_train, y_train)
+
+        print('Arousal')
+        print('Train score:', model.score(X_train, y_train))
+        print('Test score:', model.score(X_test, y_test))
+        print(model.coef_)
+
+        print('\n')
 
     # pd = pd.DataFrame(data=pd_data, columns=['manipulation', 'f-amp', 'tl-peak'])
     # print(pd)
@@ -118,4 +161,5 @@ if __name__ == '__main__':
     coefs = coefs.reshape(-1, data.shape[-1])
 
     seaborn.heatmap(coefs)
+    plt.savefig('../images/lda/coefs.png')
     plt.show()
