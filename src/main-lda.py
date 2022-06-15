@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from sklearn.model_selection import train_test_split
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
@@ -107,6 +108,8 @@ if __name__ == '__main__':
         valence = [response[0] for response in responses]
         arousal = [response[2] for response in responses]
 
+        # VALENCE LDA
+
         pd_data_valence = np.vstack((np.array(valence), frontal_amplitude, np.array(peaks))).T
         pd_data_valence = pd.DataFrame(data=pd_data_valence, columns=['valence', 'f-amp', 'tl-peak'])
 
@@ -127,6 +130,11 @@ if __name__ == '__main__':
 
         coefs_valence.append(model.coef_[0])
 
+        sns.pairplot(data, hue='valence')
+        plt.show()
+
+        # AROUSAL LDA
+
         pd_data_arousal = np.vstack((np.array(arousal), frontal_amplitude, np.array(peaks))).T
         pd_data_arousal = pd.DataFrame(data=pd_data_arousal, columns=['arousal', 'f-amp', 'tl-peak'])
 
@@ -143,6 +151,10 @@ if __name__ == '__main__':
         print(model.coef_)
 
         coefs_arousal.append(model.coef_[0])
+
+        sns.pairplot(data, hue='arousal')
+        plt.show()
+
         print('\n')
 
     coefs_valence = np.array(coefs_valence)
