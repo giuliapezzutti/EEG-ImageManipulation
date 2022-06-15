@@ -39,8 +39,8 @@ if __name__ == '__main__':
 
     for idx, code in enumerate(codes):
 
-        # TODO: remove vasa28 and viwi30 when data available
-        if code == 'krki20' or code == 'nipe10' or code == 'vasa28' or code == 'viwi30':
+        # TODO: remove viwi30 when data available
+        if code == 'krki20' or code == 'nipe10' or code == 'viwi30':
             continue
 
         print(code)
@@ -110,8 +110,10 @@ if __name__ == '__main__':
 
         # VALENCE LDA
 
-        pd_data_valence = np.vstack((np.array(valence), frontal_amplitude, np.array(peaks))).T
+        pd_data_valence = np.vstack((np.array(valence), np.array(frontal_amplitude, dtype=float),
+                                     np.array(peaks, dtype=float))).T
         pd_data_valence = pd.DataFrame(data=pd_data_valence, columns=['valence', 'f-amp', 'tl-peak'])
+        pd_data_valence[['f-amp', 'tl-peak']] = pd_data_valence[['f-amp', 'tl-peak']].astype(float)
 
         X = pd_data_valence[['f-amp', 'tl-peak']]
         Y = pd_data_valence[['valence']] == 'H'
@@ -130,13 +132,14 @@ if __name__ == '__main__':
 
         coefs_valence.append(model.coef_[0])
 
-        sns.pairplot(data, hue='valence')
+        sns.pairplot(pd_data_valence, hue='valence')
         plt.show()
 
         # AROUSAL LDA
 
         pd_data_arousal = np.vstack((np.array(arousal), frontal_amplitude, np.array(peaks))).T
         pd_data_arousal = pd.DataFrame(data=pd_data_arousal, columns=['arousal', 'f-amp', 'tl-peak'])
+        pd_data_arousal[['f-amp', 'tl-peak']] = pd_data_arousal[['f-amp', 'tl-peak']].astype(float)
 
         X = pd_data_arousal[['f-amp', 'tl-peak']]
         Y = pd_data_arousal[['arousal']] == 'H'
@@ -152,7 +155,7 @@ if __name__ == '__main__':
 
         coefs_arousal.append(model.coef_[0])
 
-        sns.pairplot(data, hue='arousal')
+        sns.pairplot(pd_data_arousal, hue='arousal')
         plt.show()
 
         print('\n')
@@ -188,5 +191,5 @@ if __name__ == '__main__':
     coefs = pd.DataFrame(data=coefs, index=channels_eeg)
 
     seaborn.heatmap(coefs)
-    plt.savefig('../images/lda/coefs.png')
+    plt.savefig('../images/lda/coefs_sex_classification.png')
     plt.show()
