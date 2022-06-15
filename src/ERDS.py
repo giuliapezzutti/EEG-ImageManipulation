@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from more_itertools import locate
 
 
-def compute_erds(epochs, rois, fs, t_min, f_max=50, path=None):
+def compute_erds(epochs, rois, fs, t_min, f_min=0, f_max=50, path=None):
     """
     Function to compute ERDS maps for a set of epochs according to different regions of interest
     :param epochs: MNE epochs object containing the annotated epochs of interest with EEG channels
@@ -12,6 +12,7 @@ def compute_erds(epochs, rois, fs, t_min, f_max=50, path=None):
     interest, the value is a list containing the channels belonging to that ROI
     :param fs: sampling frequency of the EEG acquisition
     :param t_min: time instant of the epoch (with respect to the stimuli instant)
+    :param f_min: minimum frequency for which the ERDS maps are visualized
     :param f_max: maximum frequency for which the ERDS maps are visualized
     :param path: path where to save the computed ERDS maps. If None, the maps are just shown.
     """
@@ -29,8 +30,8 @@ def compute_erds(epochs, rois, fs, t_min, f_max=50, path=None):
 
     # adjust time interval and consider just frequencies of interest
     time = time + t_min
-    spectrogram = np.squeeze(spectrogram[:, :, np.argwhere(freq < f_max), :])
-    freq = np.squeeze(freq[np.argwhere(freq < f_max)])
+    spectrogram = np.squeeze(spectrogram[:, :, np.argwhere(np.logical_and(f_min < freq, freq < f_max)), :])
+    freq = np.squeeze(freq[np.argwhere(np.logical_and(f_min < freq, freq < f_max))])
 
     # compute the vectors for visualization axis (it's necessary to have axis of length greater than the data for a
     # complete visualization)
@@ -89,7 +90,7 @@ def compute_erds(epochs, rois, fs, t_min, f_max=50, path=None):
             plt.close()
 
 
-def compute_erds_numpy(signals, annotations, channels_list, rois, fs, t_min, f_max=50, path=None):
+def compute_erds_numpy(signals, annotations, channels_list, rois, fs, t_min, f_min=0, f_max=50, path=None):
     """
     Function to compute ERDS maps for a set of epochs according to different regions of interest
     :param signals: Numpy array containing epochs data - shape: epochs x channels x instants
@@ -99,6 +100,7 @@ def compute_erds_numpy(signals, annotations, channels_list, rois, fs, t_min, f_m
     interest, the value is a list containing the channels belonging to that ROI
     :param fs: sampling frequency of the EEG acquisition
     :param t_min: time instant of the epoch (with respect to the stimuli instant)
+    :param f_min: minimum frequency for which the ERDS maps are visualized
     :param f_max: maximum frequency for which the ERDS maps are visualized
     :param path: path where to save the computed ERDS maps. If None, the maps are just shown.
     """
@@ -112,8 +114,8 @@ def compute_erds_numpy(signals, annotations, channels_list, rois, fs, t_min, f_m
 
     # adjust time interval and consider just frequencies of interest
     time = time + t_min
-    spectrogram = np.squeeze(spectrogram[:, :, np.argwhere(freq < f_max), :])
-    freq = np.squeeze(freq[np.argwhere(freq < f_max)])
+    spectrogram = np.squeeze(spectrogram[:, :, np.argwhere(np.logical_and(f_min < freq, freq < f_max)), :])
+    freq = np.squeeze(freq[np.argwhere(np.logical_and(f_min < freq, freq < f_max))])
 
     # compute the vectors for visualization axis (it's necessary to have axis of length greater than the data for a
     # complete visualization)

@@ -1,4 +1,5 @@
 import os
+import pathlib
 import pickle
 from pathlib import Path
 
@@ -6,7 +7,7 @@ import mne
 import numpy as np
 import pyxdf
 from matplotlib import pyplot as plt
-from ERDS import compute_erds
+from src.ERDS import compute_erds
 
 
 class EEGAnalysis:
@@ -67,15 +68,18 @@ class EEGAnalysis:
         base = os.path.abspath(self.data_path)
         folder = os.path.dirname(base).split('data/')[0]
         folder = folder.replace('\\', '/')
+        
+        project_folder = str(pathlib.Path(__file__).parent.parent.absolute())
 
         # extraction of subject, session and run indexes
         subject = (file_name.split('subj_')[1]).split('_block')[0]
 
         # output folder according to the standard
-        output_folder = folder.rsplit('/', 2)[0] + '/images/sub-' + subject
+        output_folder = str(pathlib.Path(__file__).parent.parent.absolute()) + '/images/sub-' + subject
         Path(output_folder).mkdir(parents=True, exist_ok=True)
 
-        self.file_info = {'folder': folder, 'file_name': file_name, 'subject': subject, 'output_folder': output_folder}
+        self.file_info = {'input_folder': folder, 'file_name': file_name, 'subject': subject, 
+                          'output_images_folder': output_folder, 'project_folder': project_folder}
 
     def load_xdf(self):
         """
@@ -389,7 +393,7 @@ class EEGAnalysis:
                 for condition in self.event_mapping.keys():
                     images = self.epochs[condition].plot_image(combine='mean', group_by=self.rois_numbers, show=False)
                     for idx, img in enumerate(images):
-                        img.savefig(self.file_info['output_folder'] + '/' + condition + '_' + rois_names[idx] + '.png')
+                        img.savefig(self.file_info['output_images_folder'] + '/' + condition + '_' + rois_names[idx] + '.png')
                         plt.close(img)
 
             # generate the epochs plots for each channel and save them
@@ -398,7 +402,7 @@ class EEGAnalysis:
                     images = self.epochs[condition].plot_image(show=False)
                     for idx, img in enumerate(images):
                         img.savefig(
-                            self.file_info['output_folder'] + '/' + condition + '_' + self.channels_names[idx] + '.png')
+                            self.file_info['output_images_folder'] + '/' + condition + '_' + self.channels_names[idx] + '.png')
                         plt.close(img)
 
         # generate the mean plot considering all the epochs conditions
@@ -408,14 +412,14 @@ class EEGAnalysis:
             if rois:
                 images = self.epochs.plot_image(combine='mean', group_by=self.rois_numbers, show=False)
                 for idx, img in enumerate(images):
-                    img.savefig(self.file_info['output_folder'] + '/' + rois_names[idx] + '.png')
+                    img.savefig(self.file_info['output_images_folder'] + '/' + rois_names[idx] + '.png')
                     plt.close(img)
 
             # generate the epochs plots for each channel and save them
             else:
                 images = self.epochs.plot_image(show=False)
                 for idx, img in enumerate(images):
-                    img.savefig(self.file_info['output_folder'] + '/' + self.channels_names[idx] + '.png')
+                    img.savefig(self.file_info['output_images_folder'] + '/' + self.channels_names[idx] + '.png')
                     plt.close(img)
 
         plt.close('all')
@@ -471,10 +475,10 @@ class EEGAnalysis:
             max_value = max(np.max(data), max_value)
 
         # path for images saving
-        Path(self.file_info['output_folder'] + '/epochs/').mkdir(parents=True, exist_ok=True)
+        Path(self.file_info['output_images_folder'] + '/epochs/').mkdir(parents=True, exist_ok=True)
 
         number_conditions = len(list(self.event_mapping.keys()))
-        path = self.file_info['output_folder'] + '/epochs/conditions.png'
+        path = self.file_info['output_images_folder'] + '/epochs/conditions.png'
         fig, axs = plt.subplots(int(np.ceil(number_conditions/2)), 2, figsize=(25.6, 19.2))
 
         for i, ax in enumerate(fig.axes):
@@ -503,7 +507,7 @@ class EEGAnalysis:
         plt.savefig(path)
         plt.close()
 
-        path = self.file_info['output_folder'] + '/epochs/rois.png'
+        path = self.file_info['output_images_folder'] + '/epochs/rois.png'
         number_rois = len(list(self.rois_numbers.keys()))
         fig, axs = plt.subplots(int(np.ceil(number_rois/2)), 2, figsize=(25.6, 19.2))
 
@@ -635,13 +639,13 @@ class EEGAnalysis:
         labels = [annotation[0][2] for annotation in self.epochs.get_annotations_per_epoch()]
         info = {'fs': self.eeg_fs, 'channels': self.epochs.ch_names, 'tmin': self.t_min, 'tmax': self.t_max}
 
-        Path('data/pickle/').mkdir(parents=True, exist_ok=True)
+        Path(self.file_info['project_folder'] + 'data/pickle/').mkdir(parents=True, exist_ok=True)
 
-        with open('../data/pickle/' + self.file_info['subject'] + '_data.pkl', 'wb') as f:
+        with open(self.file_info['project_folder'] + '/data/pickle/' + self.file_info['subject'] + '_data.pkl', 'wb') as f:
             pickle.dump(epochs, f)
-        with open('../data/pickle/' + self.file_info['subject'] + '_labels.pkl', 'wb') as f:
+        with open(self.file_info['project_folder'] + '/data/pickle/' + self.file_info['subject'] + '_labels.pkl', 'wb') as f:
             pickle.dump(labels, f)
-        with open('../data/pickle/' + self.file_info['subject'] + '_info.pkl', 'wb') as f:
+        with open(self.file_info['project_folder'] + '/data/pickle/' + self.file_info['subject'] + '_info.pkl', 'wb') as f:
             pickle.dump(info, f)
 
         print('Pickle files correctly saved')
@@ -677,7 +681,8 @@ class EEGAnalysis:
         self.create_epochs(visualize_epochs=save_images)
         if save_images:
             compute_erds(epochs=self.epochs, rois=self.input_info['rois'], fs=self.eeg_fs, t_min=self.t_min,
-                         path=self.file_info['output_folder'])
+                         f_min=self.input_info['erds'][0], f_max=self.input_info['erds'][1],
+                         path=self.file_info['output_images_folder'])
         if create_evoked:
             self.create_evoked()
             if save_images:
@@ -756,7 +761,8 @@ class EEGAnalysis:
         self.create_epochs(visualize_epochs=save_images, set_annotations=False)
         if save_images:
             compute_erds(epochs=self.epochs, rois=self.input_info['rois'], fs=self.eeg_fs, t_min=self.t_min,
-                         path=self.file_info['output_folder'])
+                         f_min=self.input_info['erds'][0], f_max=self.input_info['erds'][1],
+                         path=self.file_info['output_images_folder'])
         if create_evoked:
             self.create_evoked()
             if save_images:

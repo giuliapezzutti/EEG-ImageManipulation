@@ -1,7 +1,7 @@
 import json
 import tkinter
 
-from EEGAnalysis import *
+from EEGAnalysis import EEGAnalysis
 from functions import *
 
 if __name__ == '__main__':
