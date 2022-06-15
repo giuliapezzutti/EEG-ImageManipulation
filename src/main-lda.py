@@ -33,6 +33,9 @@ if __name__ == '__main__':
     pd_signal = None
     pd_gender = []
 
+    coefs_valence = []
+    coefs_arousal = []
+
     for idx, code in enumerate(codes):
 
         # TODO: remove vasa28 and viwi30 when data available
@@ -45,12 +48,14 @@ if __name__ == '__main__':
             data = pickle.load(f)
         with open(paths[idx].replace('_data', '_info'), 'rb') as f:
             info = pickle.load(f)
+            index_channels_eeg = [index for index in range(len(info['channels'])) if 'EOG' not in info['channels'][index]]
+            channels_eeg = np.array(info['channels'])[index_channels_eeg]
         with open(paths[idx].replace('_data', '_labels'), 'rb') as f:
             labels = pickle.load(f)
             conditions = [label.split('/')[1] for label in labels]
             unique_conditions = list(set(conditions))
 
-        data = data[:, [index for index in range(len(info['channels'])) if 'EOG' not in info['channels'][index]]]
+        data = data[:, index_channels_eeg]
 
         g = participant_data.loc[participant_data['code'] == code]['gender'].values[0]
 
@@ -109,7 +114,9 @@ if __name__ == '__main__':
         Y = pd_data_valence[['valence']] == 'H'
 
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30, random_state=42)
-        print(y_train)
+        y_train = np.ravel(y_train)
+        y_test = np.ravel(y_test)
+
         model = LDA()
         model.fit(X_train, y_train)
 
@@ -117,6 +124,8 @@ if __name__ == '__main__':
         print('Train score:', model.score(X_train, y_train))
         print('Test score:', model.score(X_test, y_test))
         print(model.coef_)
+
+        coefs_valence.append(model.coef_[0])
 
         pd_data_arousal = np.vstack((np.array(arousal), frontal_amplitude, np.array(peaks))).T
         pd_data_arousal = pd.DataFrame(data=pd_data_arousal, columns=['arousal', 'f-amp', 'tl-peak'])
@@ -133,10 +142,14 @@ if __name__ == '__main__':
         print('Test score:', model.score(X_test, y_test))
         print(model.coef_)
 
+        coefs_arousal.append(model.coef_[0])
         print('\n')
 
-    # pd = pd.DataFrame(data=pd_data, columns=['manipulation', 'f-amp', 'tl-peak'])
-    # print(pd)
+    coefs_valence = np.array(coefs_valence)
+    coefs_arousal = np.array(coefs_arousal)
+
+    print('Mean coefficients for valence', np.mean(coefs_valence, axis=0))
+    print('Mean coefficients for arousal', np.mean(coefs_arousal, axis=0))
 
     print('\n\nGender prediction from whole signals')
     pd_signal = np.array(pd_signal)
@@ -159,6 +172,8 @@ if __name__ == '__main__':
 
     coefs = np.array(model.coef_)
     coefs = coefs.reshape(-1, data.shape[-1])
+
+    coefs = pd.DataFrame(data=coefs, index=channels_eeg)
 
     seaborn.heatmap(coefs)
     plt.savefig('../images/lda/coefs.png')
