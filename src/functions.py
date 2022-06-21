@@ -1,3 +1,4 @@
+import mne
 import numpy as np
 from matplotlib import pyplot as plt
 import pylab as py
@@ -154,3 +155,101 @@ def get_label(valence, arousal, threshold=0.1 * 4):
         return 'LVHA'
     elif valence <= 0 and arousal <= 0:
         return 'LVLA'
+
+def get_peak_pickle(epochs, channels_list, channels_interest, labels, t_min_epoch, fs, t_min, t_max, peak, mean=True):
+    """
+    Function to extract the peaks' amplitude from the epochs separately for each condition found and returns them
+    or the mean value
+    :param fs:
+    :param epochs:
+    :param channels_list:
+    :param channels_interest: list of channels name to be investigated
+    :param labels:
+    :param t_min_epoch:
+    :param t_min: lower bound of the time window in which the algorithm should look for the peak
+    :param t_max: upper bound of the time window in which the algorithm should look for the peak
+    :param peak: +1 for a positive peak, -1 for a negative peak
+    :param mean: boolean value, if the return value should be the mean value or the list of amplitudes
+    :return: if mean=True, mean amplitude value; otherwise list of detected peaks' amplitude and list of the
+    correspondent annotations
+    """
+
+    peaks = {}
+    annotations = {}
+
+    # extraction of the data of interest and of the correspondent annotations
+    channels_index = [i for i, e in enumerate(channels_list) if e in channels_interest]
+    epochs_interest = epochs[:, channels_index, :]
+
+    # get the unique conditions of interest
+    if len(labels[0].split('/')) > 1:
+        conditions_interest = [ann.split('/')[1] for ann in labels]
+    else:
+        conditions_interest = labels
+    conditions_interest = list(set(conditions_interest))
+
+    sample_min = int((t_min - t_min_epoch) * fs)
+    sample_max = int((t_max - t_min_epoch) * fs)
+
+    # for each condition of interest
+    for condition in conditions_interest:
+
+        # get the correspondent epochs and crop the signal in the time interval for the peak searching
+        epochs_index = [i for i in range(epochs_interest.shape[0]) if condition in labels[i]]
+        condition_roi_epoch = epochs_interest[epochs_index, :, sample_min:sample_max]
+        condition_labels = np.array(labels)[epochs_index]
+
+        # if necessary, get the annotation correspondent at each epoch
+        # condition_labels = []
+        # if not mean:
+        #     condition_labels = [label for label in labels if '/' + condition in label]
+
+        peak_condition, latency_condition, annotation_condition = [], [], []
+
+        # for each epoch
+        for idx, epoch in enumerate(condition_roi_epoch):
+
+            # extract the mean signal between channels
+            signal = np.array(epoch).mean(axis=0)
+
+            # find location and amplitude of the peak of interest
+            peak_loc, peak_mag = mne.preprocessing.peak_finder(signal, thresh=(max(signal) - min(signal)) / 50,
+                                                               extrema=peak, verbose=False)
+            peak_mag = peak_mag * 1e6
+
+            # reject peaks too close to the beginning or to the end of the window
+            if len(peak_loc) > 1 and peak_loc[0] == 0:
+                peak_loc = peak_loc[1:]
+                peak_mag = peak_mag[1:]
+            if len(peak_loc) > 1 and peak_loc[-1] == (len(signal) - 1):
+                peak_loc = peak_loc[:-1]
+                peak_mag = peak_mag[:-1]
+
+            # select peak according to the minimum or maximum one and convert the location from number of sample
+            # (inside the window) to time instant inside the epoch
+            if peak == -1:
+                peak_loc = peak_loc[np.argmin(peak_mag)] / fs + t_min_epoch
+                peak_mag = np.min(peak_mag)
+            if peak == +1:
+                peak_loc = peak_loc[np.argmax(peak_mag)] / fs + t_min_epoch
+                peak_mag = np.max(peak_mag)
+
+            # save the values found
+            peak_condition.append(peak_mag)
+            latency_condition.append(peak_loc)
+
+            # in the not-mean case, it's necessary to save the correct labelling
+            if not mean:
+                annotation_condition.append(condition_labels[idx].split('/')[0])
+
+        # compute output values or arrays for each condition
+        if mean:
+            peaks[condition] = np.mean(np.array(peak_condition))
+        else:
+            peaks[condition] = np.array(peak_condition)
+            annotations[condition] = annotation_condition
+
+    if not mean:
+        return peaks, annotations
+
+    return peaks
