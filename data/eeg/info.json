@@ -12,5 +12,5 @@
 	"bad_epoch_names": ["intro", "pause", "end"],
 	"erp": [0, 170, 300],
 	"erds": [1, 30],
-	"bad_channels": {"ervi22": ["Fp1", "Fp2"], "brfr09": ["Fp1", "Fp2"], "riri06": ["Fp1", "Fp2"]}
+	"bad_channels": {"ervi22": ["Fp1", "Fp2"], "brfr09": ["Fp1", "Fp2"], "riri06": ["Fp1", "Fp2"], "viwi30": ["T7", "T8"], "vasa28": ["Fp1", "Fp2"]}
 }

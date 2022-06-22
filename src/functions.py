@@ -86,8 +86,8 @@ def plot_mean_epochs(mean_signals, conditions, rois, erps):
         ax.set_xlabel('Time (\u03bcs)')
         ax.set_ylabel('Amplitude (V)')
         ax.set_title(condition)
+        ax.legend()
 
-    plt.legend(bbox_to_anchor=(1.2, 2))
     plt.savefig(path)
     plt.close()
 
@@ -110,8 +110,8 @@ def plot_mean_epochs(mean_signals, conditions, rois, erps):
         ax.set_xlabel('Time (\u03bcs)')
         ax.set_ylabel('Amplitude (V)')
         ax.set_title(roi)
+        ax.legend()
 
-    plt.legend(bbox_to_anchor=(1.2, 1.1))
     plt.savefig(path)
     plt.close()
 

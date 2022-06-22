@@ -4,7 +4,6 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from src.EEGAnalysis import EEGAnalysis
 from src.functions import get_peak_pickle
 
 if __name__ == '__main__':
