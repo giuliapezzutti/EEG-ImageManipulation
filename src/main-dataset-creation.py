@@ -1,12 +1,11 @@
-import itertools
-import json
-
 import pandas as pd
 from sklearn import preprocessing
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_curve, auc
 from sklearn.model_selection import train_test_split
 
 from EEGAnalysis import *
 from src.models.EEGModels import EEGNet
+import tensorflow as tf
 
 if __name__ == '__main__':
 
@@ -22,9 +21,6 @@ if __name__ == '__main__':
     codes_ratings = df_ratings.loc[:, 'code'].tolist()
     codes_ratings = list(set(codes_ratings))
 
-    path_eeg = '../data/eeg/'
-    dict_info = json.load(open('../data/eeg/info_full.json'))
-
     info_dataset, signal_dataset, label_dataset = [], [], []
 
     for code in codes_form:
@@ -32,7 +28,7 @@ if __name__ == '__main__':
         if code not in codes_ratings:
             continue
 
-        if code == 'krki20' or code == 'nipe10' or code == 'maba09' or code == 'soze31' or code == 'dino02':
+        if code == 'krki20' or code == 'nipe10' or code == 'maba09' or code == 'soze31' or code == 'dino02' or code == 'ervi22':
             continue
 
         print(code)
@@ -48,6 +44,9 @@ if __name__ == '__main__':
             labels = pickle.load(f)
             conditions = [label.split('/')[1] for label in labels]
             unique_conditions = list(set(conditions))
+
+        for idx, epoch in enumerate(data):
+            data[idx] = (epoch - np.mean(epoch)) / np.std(epoch)
 
         data_form = df_form.loc[df_form['code'] == code, :].values.flatten().tolist()[1:]
         form = [data_form] * len(data)
@@ -84,9 +83,9 @@ if __name__ == '__main__':
             label_binary_dataset.append([0, 0, 1])
         elif valence > 0 and arousal > 0:
             label_binary_dataset.append([1, 1, 0])
-        elif valence > 0 and arousal <= 0:
+        elif valence > 0 >= arousal:
             label_binary_dataset.append([1, 0, 0])
-        elif valence <= 0 and arousal > 0:
+        elif valence <= 0 < arousal:
             label_binary_dataset.append([0, 1, 0])
         elif valence <= 0 and arousal <= 0:
             label_binary_dataset.append([0, 0, 0])
@@ -95,25 +94,67 @@ if __name__ == '__main__':
 
     print('Dataset ready for the training!\n')
 
-    # Path('../data/final-dataset/').mkdir(parents=True, exist_ok=True)
-    # np.save('../data/final-dataset/info_dataset.npy', info_dataset)
-    # np.save('../data/final-dataset/signal_dataset.npy', signal_dataset)
-    # np.save('../data/final-dataset/label_dataset.npy', label_binary_dataset)
-
     train_data, test_data, train_info, test_info, train_labels, test_labels = train_test_split(signal_dataset,
                                                                                                info_dataset,
                                                                                                label_binary_dataset,
-                                                                                               test_size=0.3)
+                                                                                               test_size=0.2)
     val_data, test_data, val_info, test_info, val_labels, test_labels = train_test_split(test_data, test_info,
                                                                                          test_labels, test_size=0.5)
 
-    batch_size = 32
+    batch_size = 16
     num_epochs = 20
 
     input_shape = (train_data[0].shape[0], train_data[0].shape[1])
 
     model = EEGNet(nb_classes=3, Chans=input_shape[0], Samples=input_shape[1])
-    model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
+    model.summary()
+
+    opt = tf.keras.optimizers.Adam(learning_rate=0.01)
+    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 
     history = model.fit(x=train_data[:], y=train_labels[:], validation_data=(val_data, val_labels),
-                        batch_size=batch_size, epochs=num_epochs, verbose=2)
+                        batch_size=batch_size, epochs=num_epochs)
+
+    # Extract labels of test set, predict them with the model
+
+    test_preds = model.predict(test_data)[:test_labels.shape[0]].squeeze()
+    test_est_classes = (test_preds > 0.5).astype(int)
+
+    # Determine performance scores
+
+    accuracy = accuracy_score(test_labels, test_est_classes, normalize=True)
+    precision, recall, fscore, _ = precision_recall_fscore_support(test_labels, test_est_classes, average='macro')
+
+    print('PERFORMANCES ON TEST SET:')
+    print('Accuracy: {:.2f}%'.format(accuracy * 100))
+    print('Precision: {:.2f}%'.format(precision * 100))
+    print('Recall: {:.2f}%'.format(recall * 100))
+    print('Fscore: {:.2f}%'.format(fscore * 100))
+
+    # Plot of loss-accuracy and ROC
+
+    fig, axs = plt.subplots(2, 2)
+    fig.suptitle('Loss, accuracy and ROC')
+    # Plot loss
+    axs[0, 0].plot(history.history['loss'], label='Train loss')
+    axs[0, 0].plot(history.history['val_loss'], label='Val loss')
+    axs[0, 0].legend()
+    axs[0, 0].set_xlabel('Epoch')
+    axs[0, 0].set_ylabel('Loss')
+    axs[0, 0].set_title('Loss')
+    # Plot accuracy
+    axs[1, 0].plot(history.history['accuracy'], label='Train accuracy')
+    axs[1, 0].plot(history.history['val_accuracy'], label='Val accuracy')
+    axs[1, 0].legend()
+    axs[1, 0].set_xlabel('Epoch')
+    axs[1, 0].set_ylabel('Accuracy')
+    axs[1, 0].set_title('Accuracy')
+    fpr, tpr, _ = roc_curve(test_labels, test_est_classes)
+    roc_auc = auc(fpr, tpr)
+    # Plot ROC when only 1 label is present
+    axs[0, 1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+    axs[0, 1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    axs[0, 1].set_xlabel('False Positive Rate')
+    axs[0, 1].set_ylabel('True Positive Rate')
+    axs[0, 1].set_title('ROC')
+    plt.show()
