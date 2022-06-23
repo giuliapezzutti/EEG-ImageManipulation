@@ -72,7 +72,12 @@ class EEGAnalysis:
         project_folder = str(pathlib.Path(__file__).parent.parent.absolute())
 
         # extraction of subject, session and run indexes
-        subject = (file_name.split('subj_')[1]).split('_block')[0]
+        if self.input_info['lsl-version'] == '1.12':
+            subject = (file_name.split('subj_')[1]).split('_block')[0]
+        elif self.input_info['lsl-version'] == '1.16':
+            subject = (file_name.split('sub-')[1]).split('_ses')[0]
+        else:
+            subject = ''
 
         # output folder according to the standard
         output_folder = str(pathlib.Path(__file__).parent.parent.absolute()) + '/images/sub-' + subject

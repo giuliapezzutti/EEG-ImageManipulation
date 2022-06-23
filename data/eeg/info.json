@@ -1,4 +1,5 @@
 {
+	"lsl-version": "1.12",
 	"streams": {"EEGMarkers": "BrainVision RDA Markers", "EEGData": "BrainVision RDA", "Triggers": "PsychoPy"},
 	"montage": "standard_1020",
 	"filtering": {"low": 1,"high": 60,"notch": 50},
