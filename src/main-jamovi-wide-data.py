@@ -67,7 +67,7 @@ if __name__ == '__main__':
         data_wide.to_csv('../data/jamovi-tables/h2_' + feature + '.csv', index=False)
 
     # ----------------------------------------------------------------------------------------------------------------
-    # h3: subject ID and N200 amplitude according to the manipulation
+    # h3: subject N200 and P300 amplitude according to the manipulation
 
     path = '../data/pickle/'
     dict_info = json.load(open("../data/eeg/info.json"))

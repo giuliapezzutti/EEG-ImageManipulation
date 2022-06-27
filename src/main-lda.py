@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
 from src.functions import get_label
@@ -25,19 +25,20 @@ def bandpower(x, fs, fmin, fmax):
     return np.trapz(Pxx[ind_min: ind_max], f[ind_min: ind_max])
 
 
-def lda_model(X_train, y_train, X_test, y_test):
+def lda_model(X_train, y_train, X_test, y_test, return_coef=True):
+
+    y_train = np.ravel(y_train)
+    y_test = np.ravel(y_test)
 
     model = LDA()
     model.fit(X_train, y_train)
 
-    print('Valence')
-    print('Train score:', model.score(X_train, y_train))
-    print('Test score:', model.score(X_test, y_test))
-
-    return model.coef_
+    if return_coef:
+        return model.coef_
+    return model.score(X_test, y_test)
 
 
-def lr_model(X_train, y_train, X_test, y_test):
+def lr_model_train(X_train, y_train, X_test, y_test, return_coef=True):
 
     from torch.autograd import Variable
 
@@ -68,7 +69,7 @@ def lr_model(X_train, y_train, X_test, y_test):
 
     for epoch in range(number_epochs):
         # Train Set
-        inputs = Variable(torch.tensor(X_train.values.astype(np.float32))).to(device)
+        inputs = Variable(torch.tensor(X_train.astype(np.float32))).to(device)
         labels = Variable(torch.tensor(y_train.astype(np.float32))).to(device)
 
         optimizer.zero_grad()
@@ -89,7 +90,7 @@ def lr_model(X_train, y_train, X_test, y_test):
         optimizer.step()
 
         # Test set
-        y_hat = model(Variable(torch.tensor(X_test.values.astype(np.float32))).to(device))
+        y_hat = model(Variable(torch.tensor(X_test.astype(np.float32))).to(device))
         test_lbls = Variable(torch.tensor(y_test.astype(np.float32))).to(device)
 
         test_lbls = np.squeeze(test_lbls)
@@ -101,9 +102,7 @@ def lr_model(X_train, y_train, X_test, y_test):
         test_acc = torch.sum(y_hat.round() == test_lbls) / test_lbls.size(0)
         ats_curve.append(test_acc.cpu().detach().numpy())
 
-        print('epoch {}, loss {}, test accuracy {}'.format(epoch, loss.item(), test_acc))
-
-    print('Final test accuracy: ', test_acc)
+        # print('epoch {}, loss {}, test accuracy {}'.format(epoch, loss.item(), test_acc))
 
     fig = plt.figure(figsize=(16, 10))
     plt.plot(ltr_curve, label="Loss train")
@@ -116,7 +115,82 @@ def lr_model(X_train, y_train, X_test, y_test):
 
     coef = [p.cpu().detach().numpy() for p in model.parameters()]
 
-    return coef
+    if return_coef:
+        return coef
+    return lts_curve[-1]
+
+
+def lr_training_Kfold(train_function, X, Y):
+
+    kf = KFold(n_splits=5)
+    kf.get_n_splits(X)
+
+    cvl = []
+
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index, :], X[test_index, :]
+        Y_train, Y_test = Y[train_index, :], Y[test_index, :]
+        cvl.append(train_function(X_train, Y_train, X_test, Y_test, return_coef=False))
+
+    print('Mean accuracy:', np.mean(np.array(cvl)))
+    print('Std accuracy:', np.std(np.array(cvl)))
+
+    # plt.plot(cvl)
+    # plt.show()
+    #
+    # sns.kdeplot(cvl)
+    # plt.show()
+
+    return cvl
+
+
+def lr_chance_level(train_function, X, Y, cross_validation_scores):
+
+    N_perm = 5
+    chance_cvl = []
+
+    kf = KFold(n_splits=5)
+    kf.get_n_splits(X)
+
+    for i in range(N_perm):
+        cvl = []
+
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X[train_index, :], X[test_index, :]
+            Y = np.random.permutation(Y)
+            Y_train, Y_test = Y[train_index, :], Y[test_index, :]
+            cvl.append(train_function(X_train, Y_train, X_test, Y_test, return_coef=False))
+
+        # plt.plot(cvl)
+        # plt.show()
+        print(f"Training {i}, accuracy: {cvl[-1]}")
+        chance_cvl.append(cvl)
+
+    # for i in chance_cvl:
+    #     sns.kdeplot(i)
+    # sns.kdeplot(cross_validation_scores, label="Accuracy scores")
+    # plt.show()
+
+    return chance_cvl
+
+
+def test_lda_lr(label, X, Y):
+
+    # LINEAR DISCRIMINANT ANALYSIS
+
+    print('\n'+label+' prediction with LDA')
+
+    lda = lr_training_Kfold(lda_model, X.to_numpy(), Y.to_numpy())
+    lda_chance = lr_chance_level(lda_model, X.to_numpy(), Y.values.astype(int), lda)
+
+    # LOGISTIC REGRESSION
+
+    print('\n'+label+' prediction with LR')
+
+    lr = lr_training_Kfold(lr_model_train, X.to_numpy(), Y.to_numpy())
+    lr_chance = lr_chance_level(lr_model_train, X.to_numpy(), Y.values.astype(int), lr)
+
+    return lda, lda_chance, lr, lr_chance
 
 
 if __name__ == '__main__':
@@ -141,10 +215,15 @@ if __name__ == '__main__':
     pd_signal = None
     pd_gender, coefs_valence, coefs_arousal = [], [], []
 
-    for idx, code in enumerate(codes):
+    valence_lda, valence_lr, arousal_lda, arousal_lr = [], [], [], []
+    valence_lda_chance, valence_lr_chance, arousal_lda_chance, arousal_lr_chance = [], [], [], []
 
-        if code == 'krki20' or code == 'nipe10':
-            continue
+    signal_valence_lda, signal_valence_lr, signal_arousal_lda, signal_arousal_lr = [], [], [], []
+    signal_valence_lda_chance, signal_valence_lr_chance, signal_arousal_lda_chance, signal_arousal_lr_chance = [], [], [], []
+
+    codes.remove('krki20')
+
+    for idx, code in enumerate(codes):
 
         print(code)
 
@@ -156,7 +235,10 @@ if __name__ == '__main__':
             channels_eeg = np.array(info['channels'])[index_channels_eeg]
         with open(paths[idx].replace('_data', '_labels'), 'rb') as f:
             labels = pickle.load(f)
-            conditions = [label.split('/')[1] for label in labels]
+            if len(labels[0].split('/')) > 1:
+                conditions = [label.split('/')[1] for label in labels]
+            else:
+                conditions = labels
             unique_conditions = list(set(conditions))
 
         # remove EOG data
@@ -177,6 +259,51 @@ if __name__ == '__main__':
             pd_signal = np.concatenate((pd_signal, epochs), axis=0)
             pd_gender = np.concatenate((pd_gender, gender), axis=0)
 
+        # calculate correspondent label
+
+        responses = []
+        for label in labels:
+            img_name = label.split('/')[0]
+            valence, arousal = ratings_data.loc[ratings_data['code'] == code].loc[ratings_data['img_name'] == img_name][
+                        ['valence', 'arousal']].values[0]
+            responses.append(get_label(valence, arousal))
+
+        valence = [response[0] for response in responses]
+        arousal = [response[2] for response in responses]
+
+        # -------------------------------------------------------------------------------------------------------------
+
+        # VALENCE signal
+
+        pd_data_valence = pd.DataFrame(data=epochs)
+        pd_data_valence['valence'] = valence
+
+        X = pd_data_valence.drop('valence', 1)
+        Y = pd_data_valence[['valence']] == 'H'
+
+        lda, lda_chance, lr, lr_chance = test_lda_lr('valence', X, Y)
+        signal_valence_lda.append(lda)
+        signal_valence_lda_chance.append(lda_chance)
+        signal_valence_lr.append(lr)
+        signal_valence_lr_chance.append(lr_chance)
+
+        # VALENCE signal
+
+        pd_data_valence = pd.DataFrame(data=epochs)
+        pd_data_valence['arousal'] = arousal
+
+        X = pd_data_valence.drop('valence', 1)
+        Y = pd_data_valence[['arousal']] == 'H'
+
+        lda, lda_chance, lr, lr_chance = test_lda_lr('arousal', X, Y)
+        signal_arousal_lda.append(lda)
+        signal_arousal_lda_chance.append(lda_chance)
+        signal_arousal_lr.append(lr)
+        signal_arousal_lr_chance.append(lr_chance)
+
+        exit(1)
+
+        # -------------------------------------------------------------------------------------------------------------
         # calculate mean frontal amplitude in 300-600ms
 
         frontal_indexes = np.where(np.in1d(np.array(info['channels']), np.array(rois['frontal'])))[0]
@@ -213,18 +340,9 @@ if __name__ == '__main__':
                 epoch_powers.append(bandpower(channel, info['fs'], 30, 100))
             powers.append(np.mean(np.array(epoch_powers)))
 
-        # calculate correspondent label
+        # -------------------------------------------------------------------------------------------------------------
 
-        responses = []
-        for label in labels:
-            img_name = label.split('/')[0]
-            valence, arousal = ratings_data.loc[ratings_data['code'] == code].loc[ratings_data['img_name'] == img_name][['valence', 'arousal']].values[0]
-            responses.append(get_label(valence, arousal))
-
-        valence = [response[0] for response in responses]
-        arousal = [response[2] for response in responses]
-
-        # VALENCE dataframe
+        # VALENCE features
 
         pd_data_valence = np.vstack((np.array(valence), np.array(frontal_amplitude, dtype=float),
                                      np.array(peaks, dtype=float), np.array(powers, dtype=float))).T
@@ -234,28 +352,13 @@ if __name__ == '__main__':
         X = pd_data_valence[['f-amp', 'tl-peak', 'gamma-power']]
         Y = pd_data_valence[['valence']] == 'H'
 
-        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30, random_state=42)
-        y_train = np.ravel(y_train)
-        y_test = np.ravel(y_test)
+        lda, lda_chance, lr, lr_chance = test_lda_lr('valence', X, Y)
+        valence_lda.append(lda)
+        valence_lda_chance.append(lda_chance)
+        valence_lr.append(lr)
+        valence_lr_chance.append(lr_chance)
 
-        # VALENCE LDA
-
-        print('\nValence prediction with LDA')
-
-        coefs = lda_model(X_train, y_train, X_test, y_test)
-
-        coefs_valence.append(coefs[0])
-        print(coefs)
-        # sns.pairplot(pd_data_valence, hue='valence')
-
-        # VALENCE LOGISTIC REGRESSION
-
-        print('\nValence prediction with LR')
-
-        coefs = lr_model(X_train, y_train, X_test, y_test)
-        print(coefs)
-
-        # AROUSAL dataframe
+        # AROUSAL features
 
         pd_data_arousal = np.vstack((np.array(arousal), frontal_amplitude, np.array(peaks), np.array(powers))).T
         pd_data_arousal = pd.DataFrame(data=pd_data_arousal, columns=['arousal', 'f-amp', 'tl-peak', 'gamma-power'])
@@ -264,34 +367,67 @@ if __name__ == '__main__':
         X = pd_data_arousal[['f-amp', 'tl-peak', 'gamma-power']]
         Y = pd_data_arousal[['arousal']] == 'H'
 
-        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30, random_state=42)
-        y_train = np.ravel(y_train)
-        y_test = np.ravel(y_test)
-
-        # AROUSAL LDA
-
-        print('\nArousal prediction with LDA')
-
-        coefs = lda_model(X_train, y_train, X_test, y_test)
-
-        coefs_arousal.append(coefs[0])
-        print(coefs)
-        sns.pairplot(pd_data_arousal, hue='arousal')
-
-        # AROUSAL LOGISTIC REGRESSION
-
-        print('\nArousal prediction with LR')
-
-        coefs = lr_model(X_train, y_train, X_test, y_test)
-        print(coefs)
+        lda, lda_chance, lr, lr_chance = test_lda_lr('arousal', X, Y)
+        arousal_lda.append(lda)
+        arousal_lda_chance.append(lda_chance)
+        arousal_lr.append(lr)
+        arousal_lr_chance.append(lr_chance)
 
         print('\n')
 
-    coefs_valence = np.array(coefs_valence)
-    coefs_arousal = np.array(coefs_arousal)
+    cvl_scores = [valence_lda, valence_lr, arousal_lda, arousal_lr]
+    cvl_scores_chance = [valence_lda_chance, valence_lr_chance, arousal_lda_chance, arousal_lr_chance]
+    cvl_scores_names = ['valence_lda', 'valence_lr', 'arousal_lda', 'arousal_lr']
 
-    print('Mean coefficients for valence', np.mean(coefs_valence, axis=0))
-    print('Mean coefficients for arousal', np.mean(coefs_arousal, axis=0))
+    for model_accuracies, chance_accuracies, name in zip(cvl_scores, cvl_scores_chance, cvl_scores_names):
+
+        cvl = np.matrix(model_accuracies)
+        mean = np.array(np.mean(cvl, axis=1)).flatten()
+        std = np.array(np.std(cvl, axis=1)).flatten()
+        x_pos = np.arange(len(mean))
+
+        percentile = np.percentile(np.array(chance_accuracies).flatten(), [100*(1-0.95)/2, 100*(1-(1-0.95)/2)])[1]
+        print(percentile)
+
+        fig, ax = plt.subplots()
+        ax.bar(x_pos, list(mean), yerr=list(std), align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.axhline(percentile, x_pos[0], x_pos[-1])
+        ax.set_ylabel('Accuracy')
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(codes, rotation='vertical')
+        ax.set_title(name)
+        plt.tight_layout()
+        plt.savefig('../images/lda/features_'+name+'.png')
+        plt.close()
+
+    cvl_scores = [signal_valence_lda, signal_valence_lr, signal_arousal_lda, signal_arousal_lr]
+    cvl_scores_chance = [signal_valence_lda_chance, signal_valence_lr_chance, signal_arousal_lda_chance, signal_arousal_lr_chance]
+    cvl_scores_names = ['valence_lda', 'valence_lr', 'arousal_lda', 'arousal_lr']
+
+    for model_accuracies, chance_accuracies, name in zip(cvl_scores, cvl_scores_chance, cvl_scores_names):
+
+        cvl = np.matrix(model_accuracies)
+        mean = np.array(np.mean(cvl, axis=1)).flatten()
+        std = np.array(np.std(cvl, axis=1)).flatten()
+        x_pos = np.arange(len(mean))
+
+        percentile = np.percentile(np.array(chance_accuracies).flatten(), [100*(1-0.95)/2, 100*(1-(1-0.95)/2)])[1]
+        print(percentile)
+
+        fig, ax = plt.subplots()
+        ax.bar(x_pos, list(mean), yerr=list(std), align='center', alpha=0.5, ecolor='black', capsize=10)
+        ax.axhline(percentile, x_pos[0], x_pos[-1])
+        ax.set_ylabel('Accuracy')
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(codes, rotation='vertical')
+        ax.set_title(name)
+        plt.tight_layout()
+        plt.savefig('../images/lda/signal_'+name+'.png')
+        plt.close()
+
+    exit(1)
+
+    # -----------------------------------------------------------------------------------------------------------------
 
     print('\n\nGender prediction from whole signals')
     pd_signal = np.array(pd_signal)

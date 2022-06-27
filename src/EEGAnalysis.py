@@ -46,9 +46,9 @@ class EEGAnalysis:
         self.rois_numbers = {}
 
         # extract info from the path
+        self.input_info = dict_info
         self.get_info_from_path()
         # extract info from the dict
-        self.input_info = dict_info
         self.t_min = self.input_info['t_min']  # start of each epoch
         self.t_max = self.input_info['t_max']  # end of each epoch
         # load xdf file in raw variable
@@ -642,6 +642,7 @@ class EEGAnalysis:
 
         epochs = np.array(self.epochs.get_data())
         labels = [annotation[0][2] for annotation in self.epochs.get_annotations_per_epoch()]
+        print(labels)
         info = {'fs': self.eeg_fs, 'channels': self.epochs.ch_names, 'tmin': self.t_min, 'tmax': self.t_max}
 
         Path(self.file_info['project_folder'] + 'data/pickle/').mkdir(parents=True, exist_ok=True)
