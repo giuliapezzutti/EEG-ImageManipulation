@@ -11,7 +11,7 @@
 	"epochs_reject_criteria": {"eeg": 0.0002, "eog":0.001}, 
 	"rois": {"central":["Cz", "C3", "C4"], "frontal":["Fz", "Fp1", "F3", "F7", "FC1", "FC2", "F4", "F8", "Fp2"], "occipital_parietal":["O1", "Oz", "O2", "Pz", "P3", "P7", "P4", "P8"], "temporal":["FC6", "FC5", "T7", "T8", "CP5", "CP6", "FT9", "FT10", "TP9", "TP10"]},
 	"bad_epoch_names": ["intro", "pause", "end"],
-	"erp": [0, 170, 300],
+	"erp": [0, 200, 300],
 	"erds": [1, 30],
 	"bad_channels": {"ervi22": ["Fp1", "Fp2"], "brfr09": ["Fp1", "Fp2"], "riri06": ["Fp1", "Fp2"], "viwi30": ["T7", "T8"], "vasa28": ["Fp1", "Fp2"]}
 }

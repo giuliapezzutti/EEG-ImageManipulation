@@ -1,7 +1,9 @@
 import pandas as pd
+import pyriemann
 from sklearn import preprocessing
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_curve, auc
 from sklearn.model_selection import train_test_split
+from mne.decoding import (CSP)
 
 from EEGAnalysis import *
 from src.models.EEGModels import EEGNet
@@ -22,6 +24,7 @@ if __name__ == '__main__':
     codes_ratings = list(set(codes_ratings))
 
     info_dataset, signal_dataset, label_dataset = [], [], []
+    threshold = 0.1 * 4
 
     for code in codes_form:
 
@@ -58,6 +61,31 @@ if __name__ == '__main__':
             img_name = labels[idx].split('/')[0]
             ratings.append(data_ratings.loc[data_ratings['img_name'] == img_name][['valence', 'arousal']].values[0])
 
+        encoding = []
+        for labels in ratings:
+            valence = labels[0]
+            arousal = labels[1]
+
+            if (np.square(valence) + np.square(arousal)) <= np.square(threshold):
+                encoding.append(0)
+            elif valence > 0 and arousal > 0:
+                encoding.append(1)
+            elif valence > 0 >= arousal:
+                encoding.append(3)
+            elif valence <= 0 < arousal:
+                encoding.append(2)
+            elif valence <= 0 and arousal <= 0:
+                encoding.append(4)
+
+        print(data.shape)
+        print(np.array(encoding).shape)
+
+        csp = pyriemann.spatialfilters.CSP()
+        csp.fit(np.array(data), np.array(encoding))
+        csp_data = csp.transform(data)
+        print(csp_data)
+        exit(1)
+
         info_dataset.extend(form)
         signal_dataset.extend(data)
         label_dataset.extend(np.array(ratings))
@@ -73,7 +101,6 @@ if __name__ == '__main__':
     for i in range(4, 9):
         info_dataset[:, i] = np.array(info_dataset[:, i], dtype=float) / 40
 
-    threshold = 0.1 * 4
     label_binary_dataset = []
     for labels in label_dataset:
         valence = labels[0]
