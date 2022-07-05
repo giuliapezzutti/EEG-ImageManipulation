@@ -222,18 +222,22 @@ if __name__ == '__main__':
     signal_valence_lda_chance, signal_valence_lr_chance, signal_arousal_lda_chance, signal_arousal_lr_chance = [], [], [], []
 
     codes.remove('krki20')
+    print(codes)
 
     for idx, code in enumerate(codes):
 
         print(code)
 
-        with open(paths[idx], 'rb') as f:
+        path = [i for i in paths if code in i]
+        path = [i for i in path if '_data' in i][0]
+
+        with open(path, 'rb') as f:
             data = pickle.load(f)
-        with open(paths[idx].replace('_data', '_info'), 'rb') as f:
+        with open(path.replace('_data', '_info'), 'rb') as f:
             info = pickle.load(f)
             index_channels_eeg = [index for index in range(len(info['channels'])) if 'EOG' not in info['channels'][index]]
             channels_eeg = np.array(info['channels'])[index_channels_eeg]
-        with open(paths[idx].replace('_data', '_labels'), 'rb') as f:
+        with open(path.replace('_data', '_labels'), 'rb') as f:
             labels = pickle.load(f)
             if len(labels[0].split('/')) > 1:
                 conditions = [label.split('/')[1] for label in labels]
@@ -273,6 +277,8 @@ if __name__ == '__main__':
 
         # -------------------------------------------------------------------------------------------------------------
 
+        print('Signal analysis\n')
+
         # VALENCE signal
 
         pd_data_valence = pd.DataFrame(data=epochs)
@@ -292,7 +298,7 @@ if __name__ == '__main__':
         pd_data_valence = pd.DataFrame(data=epochs)
         pd_data_valence['arousal'] = arousal
 
-        X = pd_data_valence.drop('valence', 1)
+        X = pd_data_valence.drop('arousal', 1)
         Y = pd_data_valence[['arousal']] == 'H'
 
         lda, lda_chance, lr, lr_chance = test_lda_lr('arousal', X, Y)
@@ -301,9 +307,10 @@ if __name__ == '__main__':
         signal_arousal_lr.append(lr)
         signal_arousal_lr_chance.append(lr_chance)
 
-        exit(1)
-
         # -------------------------------------------------------------------------------------------------------------
+
+        print('\nFeatures analysis')
+
         # calculate mean frontal amplitude in 300-600ms
 
         frontal_indexes = np.where(np.in1d(np.array(info['channels']), np.array(rois['frontal'])))[0]
@@ -411,6 +418,7 @@ if __name__ == '__main__':
         std = np.array(np.std(cvl, axis=1)).flatten()
         x_pos = np.arange(len(mean))
 
+        print(chance_accuracies)
         percentile = np.percentile(np.array(chance_accuracies).flatten(), [100*(1-0.95)/2, 100*(1-(1-0.95)/2)])[1]
         print(percentile)
 
