@@ -90,7 +90,7 @@ if __name__ == '__main__':
         signal_dataset.extend(data)
         label_dataset.extend(np.array(ratings))
 
-        continue
+        break
 
     info_dataset = np.array(info_dataset, dtype=object)
     signal_dataset = np.array(signal_dataset, dtype=float)
@@ -143,15 +143,15 @@ if __name__ == '__main__':
     #                                                                                      test_labels, test_size=0.5)
 
     batch_size = 16
-    num_epochs = 20
+    num_epochs = 500
 
     input_shape = (train_data[0].shape[0], train_data[0].shape[1])
 
-    model = DeepConvNet(nb_classes=1, Chans=input_shape[0], Samples=input_shape[1])
+    model = EEGNet(nb_classes=1, Chans=input_shape[0], Samples=input_shape[1])
     model.summary()
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer='sgd', loss='mse', metrics=['accuracy'])
+    model.compile(optimizer=opt, loss='mse', metrics=['accuracy'])
 
     history = model.fit(x=train_data[:], y=train_labels[:], validation_split=0.2,
                         batch_size=batch_size, epochs=num_epochs)
@@ -198,4 +198,4 @@ if __name__ == '__main__':
     # axs[0, 1].set_xlabel('False Positive Rate')
     # axs[0, 1].set_ylabel('True Positive Rate')
     # axs[0, 1].set_title('ROC')
-    # plt.show()
+    plt.show()

@@ -277,35 +277,35 @@ if __name__ == '__main__':
 
         # -------------------------------------------------------------------------------------------------------------
 
-        print('Signal analysis\n')
-
-        # VALENCE signal
-
-        pd_data_valence = pd.DataFrame(data=epochs)
-        pd_data_valence['valence'] = valence
-
-        X = pd_data_valence.drop('valence', 1)
-        Y = pd_data_valence[['valence']] == 'H'
-
-        lda, lda_chance, lr, lr_chance = test_lda_lr('valence', X, Y)
-        signal_valence_lda.append(lda)
-        signal_valence_lda_chance.append(lda_chance)
-        signal_valence_lr.append(lr)
-        signal_valence_lr_chance.append(lr_chance)
-
-        # VALENCE signal
-
-        pd_data_valence = pd.DataFrame(data=epochs)
-        pd_data_valence['arousal'] = arousal
-
-        X = pd_data_valence.drop('arousal', 1)
-        Y = pd_data_valence[['arousal']] == 'H'
-
-        lda, lda_chance, lr, lr_chance = test_lda_lr('arousal', X, Y)
-        signal_arousal_lda.append(lda)
-        signal_arousal_lda_chance.append(lda_chance)
-        signal_arousal_lr.append(lr)
-        signal_arousal_lr_chance.append(lr_chance)
+        # print('Signal analysis\n')
+        #
+        # # VALENCE signal
+        #
+        # pd_data_valence = pd.DataFrame(data=epochs)
+        # pd_data_valence['valence'] = valence
+        #
+        # X = pd_data_valence.drop('valence', 1)
+        # Y = pd_data_valence[['valence']] == 'H'
+        #
+        # lda, lda_chance, lr, lr_chance = test_lda_lr('valence', X, Y)
+        # signal_valence_lda.append(lda)
+        # signal_valence_lda_chance.append(lda_chance)
+        # signal_valence_lr.append(lr)
+        # signal_valence_lr_chance.append(lr_chance)
+        #
+        # # VALENCE signal
+        #
+        # pd_data_valence = pd.DataFrame(data=epochs)
+        # pd_data_valence['arousal'] = arousal
+        #
+        # X = pd_data_valence.drop('arousal', 1)
+        # Y = pd_data_valence[['arousal']] == 'H'
+        #
+        # lda, lda_chance, lr, lr_chance = test_lda_lr('arousal', X, Y)
+        # signal_arousal_lda.append(lda)
+        # signal_arousal_lda_chance.append(lda_chance)
+        # signal_arousal_lr.append(lr)
+        # signal_arousal_lr_chance.append(lr_chance)
 
         # -------------------------------------------------------------------------------------------------------------
 
@@ -388,13 +388,19 @@ if __name__ == '__main__':
 
     for model_accuracies, chance_accuracies, name in zip(cvl_scores, cvl_scores_chance, cvl_scores_names):
 
+        print('\n', name)
+
         cvl = np.matrix(model_accuracies)
         mean = np.array(np.mean(cvl, axis=1)).flatten()
         std = np.array(np.std(cvl, axis=1)).flatten()
         x_pos = np.arange(len(mean))
 
+        print(np.mean(np.array(chance_accuracies)))
         percentile = np.percentile(np.array(chance_accuracies).flatten(), [100*(1-0.95)/2, 100*(1-(1-0.95)/2)])[1]
         print(percentile)
+
+        sns.kdeplot(chance_accuracies)
+        plt.show()
 
         fig, ax = plt.subplots()
         ax.bar(x_pos, list(mean), yerr=list(std), align='center', alpha=0.5, ecolor='black', capsize=10)
@@ -407,31 +413,31 @@ if __name__ == '__main__':
         plt.savefig('../images/lda/features_'+name+'.png')
         plt.close()
 
-    cvl_scores = [signal_valence_lda, signal_valence_lr, signal_arousal_lda, signal_arousal_lr]
-    cvl_scores_chance = [signal_valence_lda_chance, signal_valence_lr_chance, signal_arousal_lda_chance, signal_arousal_lr_chance]
-    cvl_scores_names = ['valence_lda', 'valence_lr', 'arousal_lda', 'arousal_lr']
-
-    for model_accuracies, chance_accuracies, name in zip(cvl_scores, cvl_scores_chance, cvl_scores_names):
-
-        cvl = np.matrix(model_accuracies)
-        mean = np.array(np.mean(cvl, axis=1)).flatten()
-        std = np.array(np.std(cvl, axis=1)).flatten()
-        x_pos = np.arange(len(mean))
-
-        print(chance_accuracies)
-        percentile = np.percentile(np.array(chance_accuracies).flatten(), [100*(1-0.95)/2, 100*(1-(1-0.95)/2)])[1]
-        print(percentile)
-
-        fig, ax = plt.subplots()
-        ax.bar(x_pos, list(mean), yerr=list(std), align='center', alpha=0.5, ecolor='black', capsize=10)
-        ax.axhline(percentile, x_pos[0], x_pos[-1])
-        ax.set_ylabel('Accuracy')
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(codes, rotation='vertical')
-        ax.set_title(name)
-        plt.tight_layout()
-        plt.savefig('../images/lda/signal_'+name+'.png')
-        plt.close()
+    # cvl_scores = [signal_valence_lda, signal_valence_lr, signal_arousal_lda, signal_arousal_lr]
+    # cvl_scores_chance = [signal_valence_lda_chance, signal_valence_lr_chance, signal_arousal_lda_chance, signal_arousal_lr_chance]
+    # cvl_scores_names = ['valence_lda', 'valence_lr', 'arousal_lda', 'arousal_lr']
+    #
+    # for model_accuracies, chance_accuracies, name in zip(cvl_scores, cvl_scores_chance, cvl_scores_names):
+    #
+    #     cvl = np.matrix(model_accuracies)
+    #     mean = np.array(np.mean(cvl, axis=1)).flatten()
+    #     std = np.array(np.std(cvl, axis=1)).flatten()
+    #     x_pos = np.arange(len(mean))
+    #
+    #     print(chance_accuracies)
+    #     percentile = np.percentile(np.array(chance_accuracies).flatten(), [100*(1-0.95)/2, 100*(1-(1-0.95)/2)])[1]
+    #     print(percentile)
+    #
+    #     fig, ax = plt.subplots()
+    #     ax.bar(x_pos, list(mean), yerr=list(std), align='center', alpha=0.5, ecolor='black', capsize=10)
+    #     ax.axhline(percentile, x_pos[0], x_pos[-1])
+    #     ax.set_ylabel('Accuracy')
+    #     ax.set_xticks(x_pos)
+    #     ax.set_xticklabels(codes, rotation='vertical')
+    #     ax.set_title(name)
+    #     plt.tight_layout()
+    #     plt.savefig('../images/lda/signal_'+name+'.png')
+    #     plt.close()
 
     exit(1)
 
