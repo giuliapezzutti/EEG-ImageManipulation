@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     # exclude participant with bad acquisitions
     data = data[(data['code'] != 'maba09') & (data['code'] != 'soze31') & (data['code'] != 'nipe10') &
-                (data['code'] != 'dino02') & (data['code'] != 'krki20')]
+                (data['code'] != 'krki20')]
 
     # format the data
     data['code'] = data['code'].astype('category')

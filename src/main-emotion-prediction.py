@@ -31,7 +31,7 @@ if __name__ == '__main__':
         if code not in codes_ratings:
             continue
 
-        if code == 'krki20' or code == 'nipe10' or code == 'maba09' or code == 'soze31' or code == 'dino02':
+        if code == 'krki20' or code == 'nipe10' or code == 'maba09' or code == 'soze31':
             continue
 
         print(code)
