@@ -47,14 +47,14 @@ from tensorflow.keras.layers import SeparableConv2D, DepthwiseConv2D
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.layers import SpatialDropout2D
 from tensorflow.keras.regularizers import l1_l2
-from tensorflow.keras.layers import Input, Flatten
+from tensorflow.keras.layers import Input, Flatten, Concatenate
 from tensorflow.keras.constraints import max_norm
 from tensorflow.keras import backend as K
 
 
 def EEGNet(nb_classes, Chans = 64, Samples = 128, 
              dropoutRate = 0.5, kernLength = 64, F1 = 8, 
-             D = 2, F2 = 16, norm_rate = 0.25, dropoutType = 'Dropout'):
+             D = 2, F2 = 16, norm_rate = 0.25, dropoutType = 'Dropout', Info=9):
     """ Keras Implementation of EEGNet
     http://iopscience.iop.org/article/10.1088/1741-2552/aace8c/meta
 
@@ -146,7 +146,16 @@ def EEGNet(nb_classes, Chans = 64, Samples = 128,
     block2       = AveragePooling2D((1, 8))(block2)
     block2       = dropoutType(dropoutRate)(block2)
         
-    flatten      = Flatten(name = 'flatten')(block2)
+    flatten      = Flatten(name = 'flatten1')(block2)
+
+    # x = Model(inputs=input1, outputs=flatten)
+    #
+    # input2 = Input(shape=(Info, 1))
+    # flatten2 = Flatten()(input2)
+    #
+    # y = Model(inputs=input2, outputs=flatten2)
+    #
+    # flatten = Concatenate()([x.output, y.output])
     
     dense        = Dense(512, name = 'dense1',
                          kernel_constraint = max_norm(norm_rate))(flatten)
@@ -157,8 +166,9 @@ def EEGNet(nb_classes, Chans = 64, Samples = 128,
     dense        = Dense(nb_classes, name = 'dense',
                          kernel_constraint = max_norm(norm_rate))(dense)
     # dense      = Activation('sigmoid', name = 'sigmoid')(dense)
-    
+
     return Model(inputs=input1, outputs=dense)
+    # return Model(inputs=[x.input, y.input], outputs=dense)
 
 
 

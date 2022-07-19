@@ -399,6 +399,8 @@ if __name__ == '__main__':
         percentile = np.percentile(np.array(chance_accuracies).flatten(), [100*(1-0.95)/2, 100*(1-(1-0.95)/2)])[1]
         print(percentile)
 
+        chance_accuracies = np.array(chance_accuracies).flatten()
+        np.save('../images/lda/chance_values_'+name+'.npy', chance_accuracies)
         sns.kdeplot(chance_accuracies)
         plt.show()
 

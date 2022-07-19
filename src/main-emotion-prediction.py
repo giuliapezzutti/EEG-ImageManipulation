@@ -1,12 +1,10 @@
 import pandas as pd
-import pyriemann
 from sklearn import preprocessing
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_curve, auc
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
-from mne.decoding import (CSP)
 
 from EEGAnalysis import *
-from src.models.EEGModels import EEGNet, DeepConvNet
+from src.models.EEGModels import EEGNet
 import tensorflow as tf
 
 if __name__ == '__main__':
@@ -103,6 +101,8 @@ if __name__ == '__main__':
     for i in range(4, 9):
         info_dataset[:, i] = np.array(info_dataset[:, i], dtype=float) / 40
 
+    info_dataset = np.array(info_dataset, dtype=float)
+
     label_binary_dataset = []
     for labels in label_dataset:
         valence = labels[0]
@@ -112,28 +112,21 @@ if __name__ == '__main__':
         #     label_binary_dataset.append([0, 0, 1])
         # else:
         if valence > 0 and arousal > 0:
-            label_binary_dataset.append([1, 1, 0])
+            label_binary_dataset.append([1, 1])
         elif valence > 0 >= arousal:
-            label_binary_dataset.append([1, 0, 0])
+            label_binary_dataset.append([1, -1])
         elif valence <= 0 < arousal:
-            label_binary_dataset.append([0, 1, 0])
+            label_binary_dataset.append([-1, 1])
         elif valence <= 0 and arousal <= 0:
-            label_binary_dataset.append([0, 0, 0])
+            label_binary_dataset.append([-1, -1])
 
-        # if (np.square(valence) + np.square(arousal)) <= np.square(threshold):
-        #     label_binary_dataset.append(0)
-        # elif valence > 0 and arousal > 0:
-        #     label_binary_dataset.append(1)
-        # elif valence > 0 >= arousal:
-        #     label_binary_dataset.append(3)
-        # elif valence <= 0 < arousal:
-        #     label_binary_dataset.append(2)
-        # elif valence <= 0 and arousal <= 0:
-        #     label_binary_dataset.append(4)
-
-    label_binary_dataset = np.array(label_binary_dataset, dtype=float)[:, 0]
+    label_binary_dataset = np.array(label_binary_dataset, dtype=float)#[:, 0]
 
     print('Dataset ready for the training!\n')
+
+    unique_labels, unique_counts = np.unique(label_binary_dataset, return_counts=True, axis=0)
+    naive_model = np.max(unique_counts) / np.sum(unique_counts)
+    print('Accuracy naive model: ', naive_model)
 
     train_data, test_data, train_info, test_info, train_labels, test_labels = train_test_split(signal_dataset,
                                                                                                info_dataset,
@@ -147,14 +140,18 @@ if __name__ == '__main__':
 
     input_shape = (train_data[0].shape[0], train_data[0].shape[1])
 
-    model = EEGNet(nb_classes=1, Chans=input_shape[0], Samples=input_shape[1])
+    model = EEGNet(nb_classes=2, Chans=input_shape[0], Samples=input_shape[1], Info=info_dataset.shape[1])
     model.summary()
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer=opt, loss='mse', metrics=['accuracy'])
+    model.compile(optimizer=opt, loss=tf.keras.losses.CategoricalCrossentropy(), metrics=['accuracy'])
 
     history = model.fit(x=train_data[:], y=train_labels[:], validation_split=0.2,
                         batch_size=batch_size, epochs=num_epochs)
+
+    train_info = np.zeros(train_info.shape)
+    # history = model.fit(x=[train_data[:], train_info[:]], y=train_labels[:], validation_split=0.2,
+    #                     batch_size=batch_size, epochs=num_epochs)
 
     # Extract labels of test set, predict them with the model
 
@@ -190,12 +187,4 @@ if __name__ == '__main__':
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Accuracy')
     axs[1].set_title('Accuracy')
-    # fpr, tpr, _ = roc_curve(test_labels, test_est_classes)
-    # roc_auc = auc(fpr, tpr)
-    # # Plot ROC when only 1 label is present
-    # axs[0, 1].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-    # axs[0, 1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    # axs[0, 1].set_xlabel('False Positive Rate')
-    # axs[0, 1].set_ylabel('True Positive Rate')
-    # axs[0, 1].set_title('ROC')
     plt.show()
